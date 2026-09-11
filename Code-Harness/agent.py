@@ -1,5 +1,6 @@
 import json
 
+from context import reminder
 from llm import SYSTEM_PROMPT, call_llm
 from tools import TOOLS
 from ui import ui
@@ -17,7 +18,7 @@ while True:
 
     while True:
         with ui.working():
-            message, usage = call_llm(messages)
+            message, usage = call_llm(messages + [reminder()])
 
         messages.append(message.model_dump(exclude_none=True))
         ui.usage(usage)
