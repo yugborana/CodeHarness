@@ -1,4 +1,3 @@
-from context import note_read
 import subprocess
 
 from skills import read_skill
@@ -14,7 +13,6 @@ def powershell(command: str) -> str:
 
 def read_file(path: str) -> str:
     """Read a file and return its contents."""
-    note_read(path)
     with open(path) as f:
         return f.read()
 

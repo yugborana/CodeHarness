@@ -4,24 +4,46 @@ It goes at the END of the message list so the stable prefix in front of it
 stays cached.
 """
 
-import os
 import subprocess
 from datetime import datetime
 
-SEEN = {}
-
-def note_read(path):
-    SEEN[path] = os.path.getmtime(path)
+LABELS = {"M": "modified", "D": "deleted", "A": "added", "??": "new"}
 
 
-def stale_files():
-    return [p for p, mtime in SEEN.items() if os.path.getmtime(p) != mtime]
-
-def git_branch():
+def git(command):
     result = subprocess.run(
-        "git branch --show-current", shell=True, capture_output=True, text=True
+        f"git {command}", shell=True, capture_output=True, text=True
     )
-    return result.stdout.strip() or "(detached)"
+    return result.stdout
+
+
+def git_status():
+    """path -> status code, straight from git."""
+    return {line[3:]: line[:2].strip() for line in git("status --porcelain").splitlines()}
+
+
+LAST_STATUS = git_status()
+
+
+def file_changes():
+    """What git sees as different since the previous turn."""
+    global LAST_STATUS
+    now = git_status()
+    changed = {p: c for p, c in now.items() if LAST_STATUS.get(p) != c}
+    LAST_STATUS = now
+    return changed
+
+
+def changes_note():
+    changed = file_changes()
+    if not changed:
+        return ""
+    lines = [f"{LABELS.get(code, code)}: {path}" for path, code in changed.items()]
+    return (
+        "\n<system-reminder>\n"
+        "These files changed since your last turn. Read them again before "
+        "editing:\n" + "\n".join(lines) + "\n</system-reminder>"
+    )
 
 
 def reminder():
@@ -31,19 +53,7 @@ def reminder():
         "content": (
             "<env>\n"
             f"time: {datetime.now():%Y-%m-%d %H:%M}\n"
-            f"git branch: {git_branch()}\n"
-            "</env>" + stale_note()
+            f"git branch: {git('branch --show-current').strip() or '(detached)'}\n"
+            "</env>" + changes_note()
         ),
     }
-
-
-def stale_note():
-    """Warn about files that changed on disk since the agent read them."""
-    changed = stale_files()
-    if not changed:
-        return ""
-    return (
-        "\n<system-reminder>\n"
-        "These files changed on disk since you read them. Read them again "
-        "before editing:\n" + "\n".join(changed) + "\n</system-reminder>"
-    )

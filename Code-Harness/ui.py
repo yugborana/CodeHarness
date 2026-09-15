@@ -1,5 +1,6 @@
 import json
 from contextlib import contextmanager
+from rich.json import JSON
 from rich.console import Console, Group
 from rich.markdown import Markdown
 from rich.padding import Padding
@@ -25,6 +26,27 @@ class UI:
         self.console.print(
             Padding(Text("ctrl-d to exit", style=MUTED), (0, 0, 0, 2))
         )
+
+    def resumed(self, messages):
+        turns = sum(1 for m in messages if m["role"] == "user")
+        self.console.print(
+            Padding(
+                Text(f"resumed · {len(messages)} messages · {turns} turns", style=MUTED),
+                (0, 0, 0, 2),
+            )
+        )
+
+    def note(self, text):
+        self.console.print(Padding(Text(text, style=MUTED), (1, 0, 0, 2)))
+
+    def pick(self, title, rows):
+        """Numbered list; returns the chosen index or None."""
+        self.console.print(Padding(Text(title, style=f"bold {ACCENT}"), (1, 0, 0, 2)))
+        for i, row in enumerate(rows):
+            self.console.print(Padding(Text(f"{i:>3}  {row}", style=MUTED), (0, 0, 0, 2)))
+        answer = self.console.input(f"\n  [bold {USER}]number>[/] ").strip()
+        return int(answer) if answer.isdigit() and int(answer) < len(rows) else None
+
     def ask(self):
         self.console.print()
         try:
@@ -62,6 +84,35 @@ class UI:
                 (1, 2, 0, 2),
             )
         )
+
+    def injection(self, text):
+        self.console.print(
+            Padding(
+                Panel(
+                    Text(text.strip(), style=MUTED),
+                    title=Text("late injection", style=f"italic {MUTED}"),
+                    title_align="left",
+                    border_style=MUTED,
+                    padding=(0, 1),
+                ),
+                (1, 2, 0, 2),
+            )
+        )
+
+    def debug(self, data):
+        self.console.print(
+            Padding(
+                Panel(
+                    JSON.from_data(data),
+                    title=Text("raw response", style=f"italic {MUTED}"),
+                    title_align="left",
+                    border_style=TOOL,
+                    padding=(0, 1),
+                ),
+                (1, 2, 0, 2),
+            )
+        )
+        
     @contextmanager
     def working(self):
         with self.console.status(
