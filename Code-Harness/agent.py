@@ -2,12 +2,12 @@ import argparse
 import json
 
 import commands
-from . import session
-from .context import reminder
-from .llm import SYSTEM_PROMPT, call_llm
-from .tools import TOOLS
-from .ui import ui
-from .todos import active_form
+import session
+from context import reminder
+from llm import SYSTEM_PROMPT, call_llm
+from tools import TOOLS
+from ui import ui
+from todos import active_form
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--resume", action="store_true", help="continue the last session")
