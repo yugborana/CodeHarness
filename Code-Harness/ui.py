@@ -114,9 +114,9 @@ class UI:
         )
         
     @contextmanager
-    def working(self):
+    def working(self, label="thinking"):
         with self.console.status(
-            Text("thinking", style=MUTED), spinner="dots", spinner_style=ACCENT
+            Text(label, style=MUTED), spinner="dots", spinner_style=ACCENT
         ):
             yield
     # ---------------------------------------------------------------- usage

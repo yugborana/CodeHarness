@@ -2,11 +2,12 @@ import argparse
 import json
 
 import commands
-import session
-from context import reminder
-from llm import SYSTEM_PROMPT, call_llm
-from tools import TOOLS
-from ui import ui
+from . import session
+from .context import reminder
+from .llm import SYSTEM_PROMPT, call_llm
+from .tools import TOOLS
+from .ui import ui
+from .todos import active_form
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--resume", action="store_true", help="continue the last session")
@@ -38,7 +39,7 @@ while True:
         injection = reminder()
         ui.injection(injection["content"])
 
-        with ui.working():
+        with ui.working(active_form()):
             message, usage = call_llm(messages + [injection])
 
         messages.append(message.model_dump(exclude_none=True))

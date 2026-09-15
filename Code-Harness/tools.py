@@ -1,6 +1,7 @@
 import subprocess
 
-from skills import read_skill
+from .skills import read_skill
+from .todos import TODO_SCHEMA, write_todos
 
 
 def powershell(command: str) -> str:
@@ -132,6 +133,7 @@ TOOL_SCHEMAS = [
             },
         },
     },
+    TODO_SCHEMA,
 ]
 
 TOOLS = {
@@ -140,4 +142,5 @@ TOOLS = {
     "write_file": write_file,
     "str_replace": str_replace,
     "read_skill": read_skill,
+    "write_todos": write_todos,
 }
