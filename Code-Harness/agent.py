@@ -8,6 +8,7 @@ from llm import SYSTEM_PROMPT, call_llm
 from tools import TOOLS
 from ui import ui
 from todos import active_form
+from permissions import check
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--resume", action="store_true", help="continue the last session")
@@ -57,7 +58,13 @@ while True:
 
         for tool_call in message.tool_calls:
             args = json.loads(tool_call.function.arguments)
-            result = TOOLS[tool_call.function.name](**args)
+            action, reason = check(tool_call.function.name, args)
+            if action == "deny":
+                result = f"Blocked by policy: {reason}"
+            elif action == "ask" and not ui.approve(reason):
+                result = "The user denied this tool call."
+            else:
+                result = TOOLS[tool_call.function.name](**args)
             ui.tool(tool_call.function.name, args, result)
 
             messages.append({
