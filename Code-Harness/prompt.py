@@ -4,6 +4,9 @@
 terminal owns the wrapping and readline cannot see it. prompt_toolkit redraws
 the line itself, so deleting, word jumps and history all keep working once the
 text is longer than the screen.
+
+Ctrl+Left/Right for word navigation works natively in prompt_toolkit.
+Shift+Enter inserts a newline without submitting.
 """
 
 from pathlib import Path
@@ -21,27 +24,9 @@ STYLE = Style.from_dict({"prompt": "bold #9ece6a"})
 bindings = KeyBindings()
 
 
-# macOS sends option-arrow as escape then arrow. Terminals configured to send
-# option as meta emit alt-b / alt-f instead, which prompt_toolkit binds itself.
-@bindings.add("escape", "left")
-def _word_left(event):
-    document = event.current_buffer.document
-    event.current_buffer.cursor_position += (
-        document.find_previous_word_beginning(count=1) or 0
-    )
-
-
-@bindings.add("escape", "right")
-def _word_right(event):
-    document = event.current_buffer.document
-    event.current_buffer.cursor_position += (
-        document.find_next_word_ending(count=1) or 0
-    )
-
-
-@bindings.add("escape", "enter")
+@bindings.add("s-enter")
 def _newline(event):
-    """Option-enter starts a new line instead of sending the message."""
+    """Shift-Enter starts a new line instead of sending the message."""
     event.current_buffer.insert_text("\n")
 
 
