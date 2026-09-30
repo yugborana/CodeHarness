@@ -2,13 +2,11 @@ import subprocess
 
 from .skills import read_skill
 from .todos import TODO_SCHEMA, write_todos
-
+import sandbox
 
 def powershell(command: str) -> str:
     """Run a shell command and return its combined stdout and stderr."""
-    result = subprocess.run(
-        ["powershell", "-Command", command], capture_output=True, text=True, timeout=60
-    )
+    result = sandbox.run(command, timeout=60)
     return (result.stdout + result.stderr) or "(no output)"
 
 

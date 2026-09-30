@@ -9,13 +9,14 @@ from tools import TOOLS
 from ui import ui
 from todos import active_form
 from permissions import check
+import sandbox
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--resume", action="store_true", help="continue the last session")
 parser.add_argument("--debug", action="store_true", help="show the raw model response")
 cli = parser.parse_args()
 
-ui.banner()
+ui.banner(sandbox.name())
 
 messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 if cli.resume:
