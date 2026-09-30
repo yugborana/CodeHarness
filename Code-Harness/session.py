@@ -4,7 +4,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-SESSION_DIR = Path.home() / ".agents" / "sessions"
+PROJECT = str(Path.cwd().resolve()).replace("/", "-")
+SESSION_DIR = Path.home() / ".agents" / "sessions" / PROJECT
 CURRENT = datetime.now().strftime("%Y%m%d-%H%M%S")
 WRITTEN = 0  # how many messages are already on disk
 
@@ -31,13 +32,29 @@ def rewind_to(count):
     WRITTEN = count
 
 
+def compacted(messages):
+    """Compaction rewrites history, so record the result and start from it."""
+    global WRITTEN
+    with path_for(CURRENT).open("a") as f:
+        f.write(json.dumps({"compacted": messages}) + "\n")
+    WRITTEN = len(messages)
+
+
 def load(session_id):
     """Replay the log: messages accumulate, rewinds cut them back."""
     messages = []
     for line in path_for(session_id).read_text().splitlines():
-        entry = json.loads(line)
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            # A half-written last line, usually from a kill mid-save. Skipping
+            # it costs one message; raising would break /sessions for every
+            # chat in the project, because listing them all calls load().
+            continue
         if "rewind_to" in entry:
             del messages[entry["rewind_to"]:]
+        elif "compacted" in entry:
+            messages = list(entry["compacted"])
         else:
             messages.append(entry)
     return messages

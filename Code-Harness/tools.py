@@ -1,19 +1,33 @@
+import json
 import subprocess
 
+from . import history
+from . import sandbox
+from .permissions import check
+from .subagent import TASK_SCHEMA, task
 from .skills import read_skill
 from .todos import TODO_SCHEMA, write_todos
-import sandbox
 
-def powershell(command: str) -> str:
+
+def bash(command: str) -> str:
     """Run a shell command and return its combined stdout and stderr."""
-    result = sandbox.run(command, timeout=60)
-    return (result.stdout + result.stderr) or "(no output)"
+    try:
+        result = sandbox.run(command)
+    except subprocess.TimeoutExpired as expired:
+        # Hand the failure back as a result. A slow command is the model's
+        # problem to work around, not a reason to take the session down.
+        return (
+            f"Timed out after {expired.timeout}s and was killed. "
+            "Narrow it down - search inside the working directory rather than /."
+        )
+    return history.cap((result.stdout + result.stderr) or "(no output)")
 
 
 def read_file(path: str) -> str:
     """Read a file and return its contents."""
     with open(path) as f:
-        return f.read()
+        return history.cap(f.read())
+
 
 def write_file(path: str, content: str) -> str:
     """Create a file, or overwrite it if it already exists."""
@@ -41,11 +55,49 @@ def str_replace(path, old_str, new_str, allow_multi_edit=False):
         f.write(content.replace(old_str, new_str))
     return f"Replaced {count} match(es) in {path}"
 
+
+def execute(tool_call):
+    """Run one tool call through the permission layer.
+
+    Shared by the main loop and by subagents, so a subagent is fenced in by
+    exactly the same rules - it is not a way around them.
+
+    A tool call is text the model wrote, so all of it is untrusted: the name
+    may not exist, the arguments may not be JSON, and they may not match the
+    signature. Every one of those comes back as a result the model can read
+    and retry. None of them is allowed to end the session.
+    """
+    from .ui import ui
+
+    name = tool_call.function.name
+    try:
+        args = json.loads(tool_call.function.arguments)
+    except json.JSONDecodeError as broken:
+        return {}, f"Error: arguments were not valid JSON ({broken})."
+
+    if name not in TOOLS:
+        return args, f"Error: no tool named '{name}'. Available: {', '.join(TOOLS)}."
+
+    try:
+        action, reason = check(name, args)
+        if action == "deny":
+            return args, f"Blocked by policy: {reason}"
+        if action == "ask" and not ui.approve(reason):
+            return args, "The user denied this tool call."
+        return args, TOOLS[name](**args)
+    except TypeError as mismatch:
+        return args, f"Error: wrong arguments for {name} ({mismatch})."
+    except KeyError as missing:
+        return args, f"Error: {name} needs an argument you did not send: {missing}."
+    except Exception as failure:  # noqa: BLE001 - the model gets to see and retry
+        return args, f"Error: {name} failed - {type(failure).__name__}: {failure}"
+
+
 TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
-            "name": "powershell",
+            "name": "bash",
             "description": "Run a shell command and return its combined stdout and stderr.",
             "parameters": {
                 "type": "object",
@@ -132,13 +184,15 @@ TOOL_SCHEMAS = [
         },
     },
     TODO_SCHEMA,
+    TASK_SCHEMA,
 ]
 
 TOOLS = {
-    "powershell": powershell,
+    "bash": bash,
     "read_file": read_file,
     "write_file": write_file,
     "str_replace": str_replace,
     "read_skill": read_skill,
     "write_todos": write_todos,
+    "task": task,
 }
