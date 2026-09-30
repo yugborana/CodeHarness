@@ -194,6 +194,30 @@ class UI:
         ):
             yield
 
+    def spinner_start(self, label="thinking"):
+        """Start a spinner and return it. Call .stop() when done."""
+        status = self.console.status(
+            Text(label, style=MUTED), spinner="dots", spinner_style=ACCENT
+        )
+        status.start()
+        return status
+
+    def stream_start(self):
+        """Print the agent header before streaming begins."""
+        self.console.print(
+            Padding(Text("agent", style=f"bold {ACCENT}"), (1, 0, 0, 2))
+        )
+
+    def stream_token(self, token):
+        """Write one token of streamed content."""
+        self.console.file.write(token)
+        self.console.file.flush()
+
+    def stream_end(self):
+        """Finish streaming output."""
+        self.console.file.write("\n")
+        self.console.file.flush()
+
     # ---------------------------------------------------------------- usage
 
     def usage(self, stats):

@@ -48,8 +48,24 @@ def main():
             if history.fit(messages):
                 ui.note("dropped old tool output to make this request fit")
 
-            with ui.working(active_form()):
-                message, usage = call_llm(messages + [injection])
+            streamed = False
+            spinner = ui.spinner_start(active_form())
+
+            def on_token(token):
+                nonlocal streamed
+                if not streamed:
+                    spinner.stop()
+                    ui.stream_start()
+                    streamed = True
+                ui.stream_token(token)
+
+            try:
+                message, usage = call_llm(messages + [injection], on_token=on_token)
+            finally:
+                if streamed:
+                    ui.stream_end()
+                else:
+                    spinner.stop()
 
             messages.append(message.model_dump(exclude_none=True))
             session.save(messages)
@@ -57,9 +73,6 @@ def main():
 
             if cli.debug:
                 ui.debug(message.model_dump(exclude_none=True))
-
-            if message.content:
-                ui.agent(message.content)
 
             if not message.tool_calls:
                 break

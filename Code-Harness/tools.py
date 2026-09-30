@@ -20,7 +20,11 @@ def powershell(command: str) -> str:
             f"Timed out after {expired.timeout}s and was killed. "
             "Narrow it down - search inside the working directory rather than /."
         )
-    return history.cap((result.stdout + result.stderr) or "(no output)")
+    stderr = "\n".join(
+        line for line in result.stderr.splitlines()
+        if not line.startswith("#< CLIXML") and not line.startswith("<Objs")
+    )
+    return history.cap((result.stdout + stderr) or "(no output)")
 
 
 def read_file(path: str) -> str:

@@ -48,23 +48,109 @@ If a skill matches what the user wants, call read_skill first and follow it.
 """
 
 
-def call_llm(messages, tools=None):
-    response = client.chat.completions.create(
+def _extract_usage(usage):
+    """Pull the fields we track out of an API usage object."""
+    completion_details = usage.completion_tokens_details
+    prompt_details = usage.prompt_tokens_details
+    return {
+        "prompt_tokens": usage.prompt_tokens,
+        "completion_tokens": usage.completion_tokens,
+        "reasoning_tokens": getattr(completion_details, "reasoning_tokens", None),
+        "cached_tokens": getattr(prompt_details, "cached_tokens", None),
+    }
+
+
+def call_llm(messages, tools=None, on_token=None):
+    """Call the LLM and return (message, usage).
+
+    on_token(str)  — if provided, content is streamed token by token through
+                     this callback as it arrives.  The returned message is
+                     identical either way; streaming only changes *when* you
+                     see the text, not *what* you get back.
+    """
+    if on_token is None:
+        # Non-streaming path (compact, subagent)
+        response = client.chat.completions.create(
+            model=config.MODEL,
+            messages=messages,
+            tools=tools or TOOL_SCHEMAS,
+        )
+        return response.choices[0].message, _extract_usage(response.usage)
+
+    # ---- streaming path ------------------------------------------------
+    stream = client.chat.completions.create(
         model=config.MODEL,
         messages=messages,
         tools=tools or TOOL_SCHEMAS,
+        stream=True,
+        stream_options={"include_usage": True},
     )
 
-    message = response.choices[0].message
+    content_parts = []
+    tool_calls = {}          # index -> {id, type, function: {name, arguments}}
+    usage_data = None
 
-    completion_details = response.usage.completion_tokens_details
-    prompt_details = response.usage.prompt_tokens_details
+    for chunk in stream:
+        if chunk.usage:
+            usage_data = chunk.usage
 
-    usage = {
-        "prompt_tokens": response.usage.prompt_tokens,
-        "completion_tokens": response.usage.completion_tokens,
-        "reasoning_tokens": getattr(completion_details, "reasoning_tokens", None),
-        "cached_tokens": getattr(prompt_details, "cached_tokens", None),
+        if not chunk.choices:
+            continue
+
+        delta = chunk.choices[0].delta
+
+        # Stream content tokens live
+        if delta.content:
+            content_parts.append(delta.content)
+            on_token(delta.content)
+
+        # Accumulate tool call deltas (they arrive in pieces)
+        if delta.tool_calls:
+            for tc in delta.tool_calls:
+                idx = tc.index
+                if idx not in tool_calls:
+                    tool_calls[idx] = {
+                        "id": "", "type": "function",
+                        "function": {"name": "", "arguments": ""},
+                    }
+                entry = tool_calls[idx]
+                if tc.id:
+                    entry["id"] = tc.id
+                if tc.function:
+                    if tc.function.name:
+                        entry["function"]["name"] = tc.function.name
+                    if tc.function.arguments:
+                        entry["function"]["arguments"] += tc.function.arguments
+
+    # Reconstruct the same message type the non-streaming path returns
+    from openai.types.chat import ChatCompletionMessage
+    from openai.types.chat.chat_completion_message_tool_call import (
+        ChatCompletionMessageToolCall, Function,
+    )
+
+    final_tool_calls = None
+    if tool_calls:
+        final_tool_calls = [
+            ChatCompletionMessageToolCall(
+                id=tool_calls[i]["id"],
+                type="function",
+                function=Function(
+                    name=tool_calls[i]["function"]["name"],
+                    arguments=tool_calls[i]["function"]["arguments"],
+                ),
+            )
+            for i in sorted(tool_calls)
+        ]
+
+    message = ChatCompletionMessage(
+        role="assistant",
+        content="".join(content_parts) or None,
+        tool_calls=final_tool_calls,
+    )
+
+    usage = _extract_usage(usage_data) if usage_data else {
+        "prompt_tokens": 0, "completion_tokens": 0,
+        "reasoning_tokens": None, "cached_tokens": None,
     }
 
     return message, usage
