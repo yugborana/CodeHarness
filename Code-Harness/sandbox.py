@@ -187,7 +187,7 @@ def revoke():
 
 def _env_dict():
     """Environment that blocks network access and prevents interactive hangs."""
-    tmp = PROJECT / ".neuralcode" / "tmp"
+    tmp = PROJECT / ".agents" / "tmp"
     tmp.mkdir(parents=True, exist_ok=True)
     dead = "http://127.0.0.1:9"
     return {
