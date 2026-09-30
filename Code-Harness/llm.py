@@ -14,7 +14,7 @@ client = OpenAI(
 
 SYSTEM_PROMPT = f"""
 You are a coding agent. Your job is to code. Always code.
-Use the bash tool to inspect files.
+Use the powershell tool to inspect files.
 Use write_file to create files and str_replace to edit them.
 Answer back to the user once exploration is done.
 
@@ -35,9 +35,9 @@ conversation, so write the question so it stands alone. Do all editing
 yourself; the subagent only reads.
 
 Long tool output is cut short, and the whole thing is written to a temp file
-whose path is given at the cut. Page through it with head, tail, sed -n or
-grep rather than asking for it again. That file only exists for the current
-turn, so read it now or re-run the command later.
+whose path is given at the cut. Page through it with Select-Object -First/Last,
+Select-String, or Get-Content rather than asking for it again. That file only
+exists for the current turn, so read it now or re-run the command later.
 
 Your current working directory is: {os.getcwd()}
 

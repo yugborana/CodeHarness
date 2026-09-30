@@ -81,7 +81,7 @@ def inside_project(path):
 
 def check(name, args):
     """Return (action, reason). Action is allow, ask or deny."""
-    if name == "bash":
+    if name == "powershell":
         return decide(args["command"]), f"run: {args['command']}"
 
     if name in ("write_file", "str_replace") and not inside_project(args["path"]):

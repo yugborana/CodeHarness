@@ -9,7 +9,7 @@ from .skills import read_skill
 from .todos import TODO_SCHEMA, write_todos
 
 
-def bash(command: str) -> str:
+def powershell(command: str) -> str:
     """Run a shell command and return its combined stdout and stderr."""
     try:
         result = sandbox.run(command)
@@ -97,7 +97,7 @@ TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
-            "name": "bash",
+            "name": "powershell",
             "description": "Run a shell command and return its combined stdout and stderr.",
             "parameters": {
                 "type": "object",
@@ -188,7 +188,7 @@ TOOL_SCHEMAS = [
 ]
 
 TOOLS = {
-    "bash": bash,
+    "powershell": powershell,
     "read_file": read_file,
     "write_file": write_file,
     "str_replace": str_replace,

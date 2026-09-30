@@ -32,7 +32,7 @@ MAX_TURNS = 12  # a runaway explorer is worse than a missing answer
 # list it is offered, so it cannot call them. The "do not edit files" rule in
 # the prompt below is only asking nicely. To make that one structural too, add
 # write_file and str_replace to this set.
-WITHHELD = {"task", "write_todos", "str_replace", "write"}
+WITHHELD = {"task", "write_todos", "str_replace", "write_file"}
 
 
 SYSTEM_PROMPT = f"""
@@ -43,12 +43,12 @@ You cannot see the conversation that spawned you, and the lead agent cannot
 see anything you do here. Only your final message crosses back, so it has to
 stand on its own.
 
-You are working in {os.getcwd()}. Search inside it. Never search from / or
+You are working in {os.getcwd()}. Search inside it. Never search from C:\\ or
 from the home directory - that scans the whole machine and will time out.
 
 How to work:
-- Use bash, read_file and read_skill to find out what is actually true.
-  Prefer rg, grep and find to guess at where things live.
+- Use powershell, read_file and read_skill to find out what is actually true.
+  Prefer rg, Select-String and Get-ChildItem -Recurse to find where things live.
 - You are here to read and report, not to change anything. Do not write or
   edit files, and do not run commands with side effects.
 - Search in batches. Several greps in one turn beats one grep per turn.
