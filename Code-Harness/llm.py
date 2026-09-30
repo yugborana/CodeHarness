@@ -24,6 +24,8 @@ Keep exactly one task in_progress, mark it done the moment it is finished, and
 move the next one to in_progress in the same call. Do not batch up completions
 at the end. Skip the tool entirely for single-step tasks; it is noise there.
 
+Do NOT repeat tool outputs, file contents, or diffs back to the user in your response. The user can already see them directly in their terminal.
+
 The current list is injected back to you every turn inside <todos> tags, so
 that block - not the transcript - is the truth about where you are.
 
