@@ -50,11 +50,11 @@ If a skill matches what the user wants, call read_skill first and follow it.
 
 def _extract_usage(usage):
     """Pull the fields we track out of an API usage object."""
-    completion_details = usage.completion_tokens_details
-    prompt_details = usage.prompt_tokens_details
+    completion_details = getattr(usage, "completion_tokens_details", None)
+    prompt_details = getattr(usage, "prompt_tokens_details", None)
     return {
-        "prompt_tokens": usage.prompt_tokens,
-        "completion_tokens": usage.completion_tokens,
+        "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+        "completion_tokens": getattr(usage, "completion_tokens", 0),
         "reasoning_tokens": getattr(completion_details, "reasoning_tokens", None),
         "cached_tokens": getattr(prompt_details, "cached_tokens", None),
     }
@@ -78,20 +78,32 @@ def call_llm(messages, tools=None, on_token=None):
         return response.choices[0].message, _extract_usage(response.usage)
 
     # ---- streaming path ------------------------------------------------
-    stream = client.chat.completions.create(
-        model=config.MODEL,
-        messages=messages,
-        tools=tools or TOOL_SCHEMAS,
-        stream=True,
-        stream_options={"include_usage": True},
-    )
+    try:
+        stream = client.chat.completions.create(
+            model=config.MODEL,
+            messages=messages,
+            tools=tools or TOOL_SCHEMAS,
+            stream=True,
+            stream_options={"include_usage": True},
+        )
+    except Exception:
+        # Provider doesn't support streaming or stream_options — fall back
+        response = client.chat.completions.create(
+            model=config.MODEL,
+            messages=messages,
+            tools=tools or TOOL_SCHEMAS,
+        )
+        message = response.choices[0].message
+        if message.content:
+            on_token(message.content)
+        return message, _extract_usage(response.usage)
 
     content_parts = []
     tool_calls = {}          # index -> {id, type, function: {name, arguments}}
     usage_data = None
 
     for chunk in stream:
-        if chunk.usage:
+        if getattr(chunk, "usage", None):
             usage_data = chunk.usage
 
         if not chunk.choices:

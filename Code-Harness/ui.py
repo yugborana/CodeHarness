@@ -304,7 +304,24 @@ class UI:
     def _format_result(self, result):
         lines = result.strip().splitlines() or ["(no output)"]
         shown = lines[:MAX_TOOL_OUTPUT_LINES]
-        body = Text("\n".join(shown), style=MUTED)
+
+        body = Text()
+        for i, line in enumerate(shown):
+            if i > 0:
+                body.append("\n")
+
+            # Colorize unified diff lines
+            if line.startswith(("--- ", "+++ ")):
+                body.append(line, style=f"bold {MUTED}")
+            elif line.startswith("@@") and "@@" in line[2:]:
+                body.append(line, style=ACCENT)
+            elif line.startswith("+"):
+                body.append(line, style="#9ece6a")
+            elif line.startswith("-"):
+                body.append(line, style="#f7768e")
+            else:
+                body.append(line, style=MUTED)
+
         hidden = len(lines) - len(shown)
         if hidden > 0:
             body.append(f"\n… {hidden} more lines", style=f"italic {TOOL}")

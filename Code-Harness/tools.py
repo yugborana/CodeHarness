@@ -1,3 +1,4 @@
+import difflib
 import json
 import subprocess
 
@@ -33,11 +34,31 @@ def read_file(path: str) -> str:
         return history.cap(f.read())
 
 
+def _diff(old, new, path):
+    """Unified diff between old and new content."""
+    return "".join(difflib.unified_diff(
+        [line + "\n" for line in old.splitlines()],
+        [line + "\n" for line in new.splitlines()],
+        fromfile=f"a/{path}",
+        tofile=f"b/{path}",
+    ))
+
+
 def write_file(path: str, content: str) -> str:
     """Create a file, or overwrite it if it already exists."""
+    old = ""
+    try:
+        with open(path) as f:
+            old = f.read()
+    except FileNotFoundError:
+        pass
+
     with open(path, "w") as f:
         f.write(content)
-    return f"Wrote {path}"
+
+    if old:
+        return f"Wrote {path}\n\n{_diff(old, content, path)}"
+    return f"Created {path} ({len(content.splitlines())} lines)"
 
 
 def str_replace(path, old_str, new_str, allow_multi_edit=False):
@@ -55,9 +76,10 @@ def str_replace(path, old_str, new_str, allow_multi_edit=False):
             "or set allow_multi_edit to replace them all."
         )
 
+    new_content = content.replace(old_str, new_str)
     with open(path, "w") as f:
-        f.write(content.replace(old_str, new_str))
-    return f"Replaced {count} match(es) in {path}"
+        f.write(new_content)
+    return f"Replaced {count} match(es) in {path}\n\n{_diff(content, new_content, path)}"
 
 
 def execute(tool_call):
