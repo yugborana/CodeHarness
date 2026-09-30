@@ -59,7 +59,8 @@ def cap(text):
     return (
         text[:CAP] + f"\n\n{TRIMMED} {len(text) - CAP} of {len(text)} chars cut. "
         f"The whole output is at {path} - page through it with "
-        "head, tail, sed -n or grep. It is deleted when this turn ends.]"
+        "Get-Content, Select-Object -First/Last, or Select-String. "
+        "It is deleted when this turn ends.]"
     )
 
 

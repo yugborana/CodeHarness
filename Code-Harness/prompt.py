@@ -24,7 +24,7 @@ STYLE = Style.from_dict({"prompt": "bold #9ece6a"})
 bindings = KeyBindings()
 
 
-@bindings.add("s-enter")
+@bindings.add("escape", "enter")
 def _newline(event):
     """Shift-Enter starts a new line instead of sending the message."""
     event.current_buffer.insert_text("\n")
