@@ -69,7 +69,7 @@ def web_search(query: str, num_results: int = 5) -> str:
     return history.cap("\n\n".join(parts))
 
 
-# ── Tool schema (matches the format in tools.py) ─────────────────────
+# ── Tool schema ─────────────────────
 
 WEB_SEARCH_SCHEMA = {
     "type": "function",
