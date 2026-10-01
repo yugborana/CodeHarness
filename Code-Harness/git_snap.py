@@ -66,15 +66,17 @@ def snapshot():
 
     label = f"{LABEL_PREFIX}:turn-{_turn}"
 
-    # stash create: builds a commit object WITHOUT modifying anything.
-    # Returns empty string if working tree is clean (matches HEAD).
-    ref = _git("stash", "create", "--include-untracked").stdout.strip()
+    # stash push handles untracked files, but modifies the working tree.
+    # So if it succeeds in creating a stash, we instantly apply it back.
+    before = _git("stash", "list").stdout
+    _git("stash", "push", "--include-untracked", "-m", label)
+    after = _git("stash", "list").stdout
 
-    if ref:
-        _git("stash", "store", "-m", label, ref)
+    if before != after:
+        # A stash was created! Apply it back to restore the working tree
+        # exactly as it was, including the index.
+        _git("stash", "apply", "--index", "stash@{0}")
 
-    # If ref is empty the tree is clean — nothing to snapshot, which is fine.
-    # Undo would be a no-op anyway.
     _snapped_this_turn = True
 
 
