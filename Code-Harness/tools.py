@@ -2,12 +2,14 @@ import difflib
 import json
 import subprocess
 
+from . import git_snap
 from . import history
 from . import sandbox
 from .permissions import check
 from .subagent import TASK_SCHEMA, task
 from .skills import read_skill
 from .todos import TODO_SCHEMA, write_todos
+from .web_search import WEB_SEARCH_SCHEMA, web_search
 
 
 def powershell(command: str) -> str:
@@ -46,6 +48,8 @@ def _diff(old, new, path):
 
 def write_file(path: str, content: str) -> str:
     """Create a file, or overwrite it if it already exists."""
+    git_snap.snapshot()
+
     old = ""
     try:
         with open(path) as f:
@@ -75,6 +79,8 @@ def str_replace(path, old_str, new_str, allow_multi_edit=False):
             "Add surrounding lines to make it unique, "
             "or set allow_multi_edit to replace them all."
         )
+
+    git_snap.snapshot()
 
     new_content = content.replace(old_str, new_str)
     with open(path, "w") as f:
@@ -211,6 +217,7 @@ TOOL_SCHEMAS = [
     },
     TODO_SCHEMA,
     TASK_SCHEMA,
+    WEB_SEARCH_SCHEMA,
 ]
 
 TOOLS = {
@@ -221,4 +228,5 @@ TOOLS = {
     "read_skill": read_skill,
     "write_todos": write_todos,
     "task": task,
+    "web_search": web_search,
 }

@@ -2,6 +2,7 @@ import argparse
 
 from . import commands
 from . import compact
+from . import git_snap
 from . import history
 from . import session
 from .context import reminder
@@ -40,6 +41,7 @@ def main():
             continue
 
         messages.append({"role": "user", "content": user_input})
+        git_snap.new_turn()
 
         while True:
             injection = reminder()

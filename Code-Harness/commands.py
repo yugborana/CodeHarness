@@ -1,14 +1,16 @@
 """Slash commands. Anything typed starting with / lands here."""
 
 from . import compact as compaction
+from . import git_snap
 from . import sandbox
 from . import session
 from .ui import ui
 
 COMMANDS = {
-    "/rewind": "jump back to an earlier point in this chat",
+    "/undo":     "revert the project to before the agent's last edit",
+    "/rewind":   "jump back to an earlier point in this chat",
     "/sessions": "open a past chat",
-    "/compact": "summarise the history so far and free up the context window",
+    "/compact":  "summarise the history so far and free up the context window",
 }
 
 
@@ -68,11 +70,17 @@ def compact(messages):
 
 
 def handle(command, messages):
-    if command == "/compact":
+    parts = command.strip().split()
+    cmd = parts[0]
+    if cmd == "/undo":
+        turn = int(parts[1]) if len(parts) > 1 else None
+        ui.note(git_snap.undo(turn))
+        return messages
+    if cmd == "/compact":
         return compact(messages)
-    if command == "/rewind":
+    if cmd == "/rewind":
         return rewind(messages)
-    if command == "/sessions":
+    if cmd == "/sessions":
         return sessions(messages)
     ui.note("\n".join(f"{name}  -  {help}" for name, help in COMMANDS.items()))
     return messages
