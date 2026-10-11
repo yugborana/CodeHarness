@@ -11,6 +11,8 @@ COMMANDS = {
     "/rewind":   "jump back to an earlier point in this chat",
     "/sessions": "open a past chat",
     "/compact":  "summarise the history so far and free up the context window",
+    "/map":      "show repository map of key classes, functions, and definitions",
+    "/memory":   "view persistent project memory (AGENTS.md)",
 }
 
 
@@ -82,5 +84,23 @@ def handle(command, messages):
         return rewind(messages)
     if cmd == "/sessions":
         return sessions(messages)
+    if cmd == "/map":
+        target = parts[1] if len(parts) > 1 else "."
+        from .repomap import RepoMap, find_src_files
+        with ui.working(f"mapping {target}"):
+            rm = RepoMap(root=target)
+            files = find_src_files(target)
+            rmap = rm.get_ranked_tags_map([], files)
+        ui.note(rmap if rmap else "No repository map generated.")
+        return messages
+    if cmd in ("/memory", "/agents"):
+        from .memory import get_memory_path, read_memory
+        mem = read_memory()
+        path = get_memory_path()
+        if mem:
+            ui.note(f"[{path.name}]\n\n{mem}")
+        else:
+            ui.note(f"No memory found in {path.name}. Add instructions to {path.name} or use the 'remember' tool.")
+        return messages
     ui.note("\n".join(f"{name}  -  {help}" for name, help in COMMANDS.items()))
     return messages

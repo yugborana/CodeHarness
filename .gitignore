@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 .env
+.tags.cache.*
+.agents/tmp/

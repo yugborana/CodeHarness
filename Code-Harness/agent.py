@@ -7,7 +7,7 @@ from . import history
 from . import session
 from .context import reminder
 from .hooks import hooks
-from .llm import SYSTEM_PROMPT, call_llm
+from .llm import SYSTEM_PROMPT, call_llm, system_prompt
 from . import sandbox
 from .todos import active_form
 from .tools import execute
@@ -22,11 +22,13 @@ def main():
 
     ui.banner(sandbox.name())
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": system_prompt()}]
     if cli.resume:
         saved = session.all_sessions()
         if saved:
             messages = session.open_session(saved[0]["id"])
+            if messages and messages[0].get("role") == "system":
+                messages[0]["content"] = system_prompt()
             history.strip(messages)
             ui.resumed(messages)
             ui.replay(messages)

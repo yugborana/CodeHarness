@@ -90,6 +90,27 @@ def str_replace(path, old_str, new_str, allow_multi_edit=False):
     return f"Replaced {count} match(es) in {path}\n\n{_diff(content, new_content, path)}"
 
 
+def repo_map(focus_files: list[str] | None = None, path: str = ".") -> str:
+    """Return a concise map of key classes, functions, and definitions across the repository.
+    Optionally pass focus_files to prioritize code related to those files, or path to inspect a subfolder or repo."""
+    try:
+        from .repomap import RepoMap, find_src_files
+        rm = RepoMap(root=path)
+        all_files = find_src_files(path)
+        chat_files = focus_files or []
+        res = rm.get_ranked_tags_map(chat_files, all_files)
+        return history.cap(res or "(No repo map available)")
+    except Exception as e:
+        return f"Error generating repo map: {e}"
+
+
+def remember(fact: str) -> str:
+    """Save an important fact, convention, architectural decision, or user preference to AGENTS.md."""
+    from .memory import remember as save_memory
+
+    return save_memory(fact)
+
+
 def execute(tool_call):
     """Run one tool call through the permission layer.
 
@@ -230,6 +251,51 @@ TOOL_SCHEMAS = [
     TODO_SCHEMA,
     TASK_SCHEMA,
     WEB_SEARCH_SCHEMA,
+    {
+        "type": "function",
+        "function": {
+            "name": "repo_map",
+            "description": (
+                "Return a concise structural map of the repository showing key classes, "
+                "functions, methods, and files ranked by importance. Use this to orient yourself "
+                "and find where symbols are defined without grepping every file."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "focus_files": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional list of files to prioritize context for.",
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Directory or repository path to map (defaults to current project '.').",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remember",
+            "description": (
+                "Save an important fact, convention, architectural decision, or user preference "
+                "to the project's permanent AGENTS.md memory so it is remembered across all future sessions."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fact": {
+                        "type": "string",
+                        "description": "The specific fact, rule, or architectural insight to remember.",
+                    },
+                },
+                "required": ["fact"],
+            },
+        },
+    },
 ]
 
 TOOLS = {
@@ -241,4 +307,6 @@ TOOLS = {
     "write_todos": write_todos,
     "task": task,
     "web_search": web_search,
+    "repo_map": repo_map,
+    "remember": remember,
 }

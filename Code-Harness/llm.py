@@ -4,6 +4,7 @@ import os
 from openai import OpenAI
 
 from . import config
+from .memory import memory_prompt
 from .skills import skills_prompt
 from .tools import TOOLS, TOOL_SCHEMAS
 
@@ -12,11 +13,15 @@ client = OpenAI(
     api_key=config.API_KEY,
 )
 
-SYSTEM_PROMPT = f"""
+
+def system_prompt():
+    return f"""
 You are a coding agent. Your job is to code. Always code.
 Use the powershell tool to inspect files.
 Use write_file to create files and str_replace to edit them.
 Use web_search to look up documentation, error messages, or APIs you are unsure about.
+Use repo_map to get a structural map of the codebase and locate where classes and functions are defined.
+Use remember to save permanent project conventions, architectural decisions, or user preferences to AGENTS.md so future sessions remember them.
 Answer back to the user once exploration is done.
 
 For any task that takes more than one step, call write_todos first and plan it
@@ -48,7 +53,11 @@ You have skills available. Each one is a set of instructions for a task.
 If a skill matches what the user wants, call read_skill first and follow it.
 
 {skills_prompt()}
+{memory_prompt()}
 """
+
+
+SYSTEM_PROMPT = system_prompt()
 
 
 def _extract_usage(usage):
