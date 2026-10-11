@@ -6,6 +6,7 @@ from . import git_snap
 from . import history
 from . import session
 from .context import reminder
+from .hooks import hooks
 from .llm import SYSTEM_PROMPT, call_llm
 from . import sandbox
 from .todos import active_form
@@ -41,6 +42,7 @@ def main():
             continue
 
         messages.append({"role": "user", "content": user_input})
+        hooks.before_agent(user_input)
         git_snap.new_turn()
 
         while True:
@@ -77,6 +79,11 @@ def main():
                 ui.debug(message.model_dump(exclude_none=True))
 
             if not message.tool_calls:
+                # Final answer — extract text for the after_agent hook
+                answer = ""
+                if hasattr(message, "content") and message.content:
+                    answer = message.content
+                hooks.after_agent(user_input, answer)
                 break
 
             for tool_call in message.tool_calls:

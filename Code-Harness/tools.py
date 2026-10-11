@@ -5,7 +5,9 @@ import subprocess
 from . import git_snap
 from . import history
 from . import sandbox
+from .hooks import hooks
 from .permissions import check
+from .redaction import redact_tool_args, redact_tool_result
 from .subagent import TASK_SCHEMA, task
 from .skills import read_skill
 from .todos import TODO_SCHEMA, write_todos
@@ -116,7 +118,17 @@ def execute(tool_call):
             return args, f"Blocked by policy: {reason}"
         if action == "ask" and not ui.approve(reason):
             return args, "The user denied this tool call."
-        return args, TOOLS[name](**args)
+
+        hooks.before_tool(name, args)
+        result = TOOLS[name](**args)
+
+        # Redact secrets from the result before it enters the transcript
+        result, report = redact_tool_result(result)
+        if report.count:
+            ui.note(report.summary())
+
+        hooks.after_tool(name, args, result)
+        return args, result
     except TypeError as mismatch:
         return args, f"Error: wrong arguments for {name} ({mismatch})."
     except KeyError as missing:
